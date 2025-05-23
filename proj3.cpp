@@ -1,6 +1,7 @@
 //TODO: understand pointers deeply, spend even hour relearning stuff because you won't understand a thing either way.
 //TODO: when adding values bigger or smaller than minmax or any other, skip
 //TODO: when test ends with print, it doesnt end
+//TODO: changing the child and root structs into one -> TreeNode struct, limits, are not used elsewhere [what about empty root mr]
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
@@ -23,7 +24,6 @@ struct MetaInfo
 };
 
 
-
 //root of trie tree
 struct Root
 {
@@ -33,6 +33,7 @@ struct Root
     Node* startOfList;                                  //pointer to first element in the list
 };
 
+
 //every other node of trie tree
 struct Child
 {
@@ -41,6 +42,7 @@ struct Child
     Node* startOfList;                                  //pointer to first element in the list
 };
 
+
 //one element of the list
 struct Node
 {
@@ -48,7 +50,6 @@ struct Node
     Node* nextListNode;                                 //next element in this list
     int listnum;                                        //which element of the list it is eg. 0,1,7 etc.
 };
-
 
 
 //=============================================================================================================================
@@ -86,7 +87,10 @@ void handleRootEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Root* TreeR
     NewNode->nextTreeNode->startOfList = nullptr;
 }
 
+//TODO:
 //handle adding key to the nonempty root list TODO: bool and different function for going into child
+//nullptr serves as false 
+//non null ptr serves as true and get's us adress to the child element
 bool isKeyInList(int mod,  Root* TreeRoot)
 {
     Node* currentNode = TreeRoot->startOfList;
@@ -94,6 +98,7 @@ bool isKeyInList(int mod,  Root* TreeRoot)
     {
         if (currentNode->listnum == mod)
         {
+            //and maybe get pointer to this exact field //TODO:
             return true;
         }
         //check if current node is bigger than 
@@ -107,6 +112,20 @@ bool isKeyInList(int mod,  Root* TreeRoot)
     return false;
 }
 
+//helper function initialising New nodes in the list (new TreeNodes also)
+void fillOutNewNode(Node* newNode, Node* nextNode, int key, int mod, MetaInfo* MetaInfo)
+{
+    newNode->listnum = mod;
+    newNode->nextListNode = nextNode;
+    newNode->nextTreeNode = new Child;
+    newNode->nextTreeNode->key = key;
+    newNode->nextTreeNode->listMaxSize = MetaInfo->childConnections;
+    newNode->nextTreeNode->startOfList = nullptr;
+}
+
+//TODO: function of assigning child values to the given pointer, pointer manipulation in list is different but adding child
+// is always the same
+// 
 //add the key to the nonEmpty list (we know our field is empty)  TODO: compilable for root and children -> metainfo to number like int limit
 void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
 {
@@ -129,55 +148,42 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
     //=========== ONLY ONE ELEMENT IN LIST=========================
     if (previousNode == nullptr)
     {
+        //our node goes to the beggining
         if (currentNode->listnum > mod)
         {
             //save the pointer to beggining of the list
-            Node* tmp = currentNode;
+            Node* nextNode = currentNode;
 
             //update beggining of the list
             TreeRoot->startOfList = new Node;
-            TreeRoot->startOfList->listnum = mod;
-            TreeRoot->startOfList->nextListNode = tmp;
-            TreeRoot->startOfList->nextTreeNode = new Child;
-            TreeRoot->startOfList->nextTreeNode->key = key;
-            TreeRoot->startOfList->nextTreeNode->listMaxSize = MetaInfo->childConnections;
-            TreeRoot->startOfList->nextTreeNode->startOfList = nullptr;
+            fillOutNewNode(TreeRoot->startOfList, nextNode, key, mod, MetaInfo);
             return;
         }
+        //new Node will be last
         else if (currentNode->listnum < mod)
         {
+            //last node points nowhere
+            Node* nextNode = nullptr;
             currentNode->nextListNode = new Node;
-            currentNode->nextListNode->listnum = mod;
-            currentNode->nextListNode->nextListNode = nullptr;
-            currentNode->nextListNode->nextTreeNode = new Child;
-            currentNode->nextListNode->nextTreeNode->key = key;
-            currentNode->nextListNode->nextTreeNode->listMaxSize = MetaInfo->childConnections;
-            currentNode->nextListNode->nextTreeNode->startOfList = nullptr;
+            fillOutNewNode(currentNode->nextListNode, nextNode, key, mod, MetaInfo);
             return;
         }
-        printf("error, did not found place in one element list % d\n", mod);
+        printf("one element list adding error % d\n", mod);
         return;
     }
-    printf("not an edge case, trying to add %d\n", mod);
-
+    printf("more than one element case: %d\n", mod);
 
     //============= MORE THAN ONE ELEMENT IN THE LIST ==========================
 
     //"edge case" -> value inserted is smaller than two smallest values
     if (previousNode->listnum > mod)
     {
-        //almost the same logic as with one record, smaller, only tmp pointer differs, can be made into a function
         //save the pointer to beggining of the list
-        Node* tmp = previousNode;
+        Node* nextNode = previousNode;
 
         //update beggining of the list
         TreeRoot->startOfList = new Node;
-        TreeRoot->startOfList->listnum = mod;
-        TreeRoot->startOfList->nextListNode = tmp;
-        TreeRoot->startOfList->nextTreeNode = new Child;
-        TreeRoot->startOfList->nextTreeNode->key = key;
-        TreeRoot->startOfList->nextTreeNode->listMaxSize = MetaInfo->childConnections;
-        TreeRoot->startOfList->nextTreeNode->startOfList = nullptr;
+        fillOutNewNode(TreeRoot->startOfList, nextNode, key, mod, MetaInfo);
         return;
     }
 
@@ -242,6 +248,8 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
     }
     else
     {
+        //TODO: change this function to pointer returning one, null as false, != null as true, and direction to the child!
+        //check if there is node with the same MOD -> can't insert on this level
         if (isKeyInList(mod, TreeRoot) == true)
         {
             //jump to the child node
@@ -249,14 +257,12 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
         }
         else
         {
+            //add key at "current level"
             addKeyToList(key, mod, MetaInfo, TreeRoot);
             return;
         }
     }
 
-    //step 2.2 if not check if list is empty at div
-
-    //step 2.3 if isn't go to the child
     printf("I should insert %d, but i am not done :(\n", key);
 }
 
@@ -300,6 +306,7 @@ void deleteKey(int key)
 void printRoot(Root* TreeRoot)
 {
     printf("value of the root itself: %d\n", TreeRoot->key);
+    printf("\n");
     Node* currentNode = TreeRoot->startOfList;
 
     while (currentNode != nullptr)
@@ -354,6 +361,7 @@ int main()
             case 'D':
                 deleteKey(key);
                 break;
+            //for debugging functions
             case '@':
                 printRoot(&Root);
                 break;
