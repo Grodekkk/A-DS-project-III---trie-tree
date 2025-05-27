@@ -2,6 +2,9 @@
 //TODO: when adding values bigger or smaller than minmax or any other, skip
 //TODO: when test ends with print, it doesnt end
 //TODO: changing the child and root structs into one -> TreeNode struct, limits, are not used elsewhere [what about empty root mr]
+// // TODO: HOW DIV AND MOD ARE PASSED IN INSERT AND LOOK FUNCTIONS?
+//TODO: inserting too big numbers? skip.
+//TODO: look is buggy as hell, go for it step by step
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
@@ -51,6 +54,12 @@ struct Node
     int listnum;                                        //which element of the list it is eg. 0,1,7 etc.
 };
 
+struct ChildFindingNodes
+{
+    Node* previousNode;
+    Node* currentNode;
+};
+
 
 //=============================================================================================================================
 //======================================= SHARED/MISC. FUNCTIONS ==============================================================
@@ -87,11 +96,26 @@ void handleRootEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Root* TreeR
     NewNode->nextTreeNode->startOfList = nullptr;
 }
 
-//TODO:
-//handle adding key to the nonempty root list TODO: bool and different function for going into child
-//nullptr serves as false 
-//non null ptr serves as true and get's us adress to the child element
-bool isKeyInList(int mod,  Root* TreeRoot)
+//when cleaning -> merging root as Child node you can merge it with upper funtion
+void handleListEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Child* ChildNode)
+{
+    //rootList is no longer empty, we attach new node to it
+    Node* NewNode = new Node;
+    ChildNode->startOfList = NewNode;
+
+    //new list node gets its order, next node, pointer to child
+    NewNode->listnum = mod;
+    NewNode->nextListNode = nullptr;
+    NewNode->nextTreeNode = new Child;
+
+    //next treeNode gets key, max children, and empty list
+    NewNode->nextTreeNode->key = key;
+    NewNode->nextTreeNode->listMaxSize = MetaInfo->childConnections;
+    NewNode->nextTreeNode->startOfList = nullptr;
+}
+
+//returns pointer to the node with same modulo as key, nullptr if such node don't exist
+Node* isKeyInList(int mod,  Root* TreeRoot)
 {
     Node* currentNode = TreeRoot->startOfList;
     while (currentNode != nullptr)
@@ -99,17 +123,39 @@ bool isKeyInList(int mod,  Root* TreeRoot)
         if (currentNode->listnum == mod)
         {
             //and maybe get pointer to this exact field //TODO:
-            return true;
+            return currentNode;
         }
         //check if current node is bigger than 
         if (currentNode->listnum > mod)
         {
-            return false;
+            return nullptr;
         }
 
         currentNode = currentNode->nextListNode;
     }
-    return false;
+    return nullptr;
+}
+
+//same as up but for list TODO: merging this and every other insert function after root and child -> treeNode merge
+Node* isKeyInListButForChildRepairMe(int mod, Child* ChildNode)
+{
+    Node* currentNode = ChildNode->startOfList;
+    while (currentNode != nullptr)
+    {
+        if (currentNode->listnum == mod)
+        {
+            //and maybe get pointer to this exact field //TODO:
+            return currentNode;
+        }
+        //check if current node is bigger than 
+        if (currentNode->listnum > mod)
+        {
+            return nullptr;
+        }
+
+        currentNode = currentNode->nextListNode;
+    }
+    return nullptr;
 }
 
 //helper function initialising New nodes in the list (new TreeNodes also)
@@ -125,10 +171,10 @@ void fillOutNewNode(Node* newNode, Node* nextNode, int key, int mod, MetaInfo* M
 
 //TODO: function of assigning child values to the given pointer, pointer manipulation in list is different but adding child
 // is always the same
-// 
 //add the key to the nonEmpty list (we know our field is empty)  TODO: compilable for root and children -> metainfo to number like int limit
 void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
 {
+    //get pointers to first two elements in the list, if there is at least two elements in the list
     Node* currentNode;
     Node* previousNode;
     //if there is more than one element
@@ -148,6 +194,7 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
     //=========== ONLY ONE ELEMENT IN LIST=========================
     if (previousNode == nullptr)
     {
+        //TODO: whole inside can be another function
         //our node goes to the beggining
         if (currentNode->listnum > mod)
         {
@@ -171,7 +218,7 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
         printf("one element list adding error % d\n", mod);
         return;
     }
-    printf("more than one element case: %d\n", mod);
+    //printf("more than one element case: %d\n", mod);
 
     //============= MORE THAN ONE ELEMENT IN THE LIST ==========================
 
@@ -193,13 +240,10 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
         //check if our value can "fit" inbetween
         if (previousNode->listnum < mod && currentNode->listnum > mod)
         {
+            Node* nextNode = currentNode;
             previousNode->nextListNode = new Node;
-            previousNode->nextListNode->nextListNode = currentNode;
-            previousNode->nextListNode->listnum = mod;
-            previousNode->nextListNode->nextTreeNode = new Child;
-            previousNode->nextListNode->nextTreeNode->key = key;
-            previousNode->nextListNode->nextTreeNode->listMaxSize = MetaInfo->childConnections;
-            previousNode->nextListNode->nextTreeNode->startOfList = nullptr;
+
+            fillOutNewNode(previousNode->nextListNode, nextNode, key, mod, MetaInfo);
             return;
         }
 
@@ -209,12 +253,9 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
             if (currentNode->listnum < mod)
             {
                 currentNode->nextListNode = new Node;
-                currentNode->nextListNode->nextListNode = nullptr;
-                currentNode->nextListNode->listnum = mod;
-                currentNode->nextListNode->nextTreeNode = new Child;
-                currentNode->nextListNode->nextTreeNode->key = key;
-                currentNode->nextListNode->nextTreeNode->listMaxSize = MetaInfo->childConnections;
-                currentNode->nextListNode->nextTreeNode->startOfList = nullptr;
+                Node* nextNode = nullptr;
+
+                fillOutNewNode(currentNode->nextListNode, nextNode, key, mod, MetaInfo);
                 return;
             }
         }
@@ -224,6 +265,171 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
     }
     
     printf("adding this failed %d\n", mod);
+}
+
+//same as above, merge it pleasw!!
+void addKeyToListChild(int key, int mod, MetaInfo* MetaInfo, Child* ChildNode)
+{
+    //get pointers to first two elements in the list, if there is at least two elements in the list
+    Node* currentNode;
+    Node* previousNode;
+    //if there is more than one element
+    if (ChildNode->startOfList->nextListNode != nullptr)
+    {
+        currentNode = ChildNode->startOfList->nextListNode;
+        previousNode = ChildNode->startOfList;
+    }
+    else
+    {
+        currentNode = ChildNode->startOfList;
+        previousNode = nullptr;
+    }
+
+
+
+    //=========== ONLY ONE ELEMENT IN LIST=========================
+    if (previousNode == nullptr)
+    {
+        //TODO: whole inside can be another function
+        //our node goes to the beggining
+        if (currentNode->listnum > mod)
+        {
+            //save the pointer to beggining of the list
+            Node* nextNode = currentNode;
+
+            //update beggining of the list
+            ChildNode->startOfList = new Node;
+            fillOutNewNode(ChildNode->startOfList, nextNode, key, mod, MetaInfo);
+            return;
+        }
+        //new Node will be last
+        else if (currentNode->listnum < mod)
+        {
+            //last node points nowhere
+            Node* nextNode = nullptr;
+            currentNode->nextListNode = new Node;
+            fillOutNewNode(currentNode->nextListNode, nextNode, key, mod, MetaInfo);
+            return;
+        }
+        printf("one element list adding error % d\n", mod);
+        return;
+    }
+   // printf("more than one element case: %d\n", mod);
+
+    //============= MORE THAN ONE ELEMENT IN THE LIST ==========================
+
+    //"edge case" -> value inserted is smaller than two smallest values
+    if (previousNode->listnum > mod)
+    {
+        //save the pointer to beggining of the list
+        Node* nextNode = previousNode;
+
+        //update beggining of the list
+        ChildNode->startOfList = new Node;
+        fillOutNewNode(ChildNode->startOfList, nextNode, key, mod, MetaInfo);
+        return;
+    }
+
+    //handling "in between" cases, and "last one" cases
+    while (currentNode != nullptr)
+    {
+        //check if our value can "fit" inbetween
+        if (previousNode->listnum < mod && currentNode->listnum > mod)
+        {
+            Node* nextNode = currentNode;
+            previousNode->nextListNode = new Node;
+
+            fillOutNewNode(previousNode->nextListNode, nextNode, key, mod, MetaInfo);
+            return;
+        }
+
+        //check if it's end of the list
+        if (currentNode->nextListNode == nullptr)
+        {
+            if (currentNode->listnum < mod)
+            {
+                currentNode->nextListNode = new Node;
+                Node* nextNode = nullptr;
+
+                fillOutNewNode(currentNode->nextListNode, nextNode, key, mod, MetaInfo);
+                return;
+            }
+        }
+
+        previousNode = currentNode;
+        currentNode = currentNode->nextListNode;
+    }
+
+    printf("adding this failed %d\n", mod);
+}
+
+//function iterating insertion throught deeper levels
+void insertKeyInDeeperLevels(int key, int div, MetaInfo* MetaInfo, Child* ChildN)
+{
+    //important, key serves the same but we divide the div by the 
+    //logic is very simmilar to the root if not 1:1, in future root should't be separate struct'ure
+
+    Child* ChildNode = ChildN;
+    int division = div;
+    int level = 1;
+    while (true)
+    {
+        //step 1: check if value in this node is the same as key, //TODO: this can be unnecesarry double checked
+        if (ChildNode->key == key)
+        {
+            printf("%d exists\n", key);
+            return;
+        }
+
+        //getting new keyOrders, this time we divide the result of previous division
+    // MOD -> for order in this exact list   |||    DIV -> to be passed to the next node   ||| key -> value itself
+        //TODO: why it work -> on piece of paper and stanford tree
+        
+        int mod = division % MetaInfo->childConnections;
+        division = division / MetaInfo->childConnections;
+        //step 2.1 check if list is empty
+        if (ChildNode->startOfList == nullptr)
+        {
+            handleListEmptyListInsert(key, mod, MetaInfo, ChildNode);
+            //printf("%d added at level %d, parrent: %d\n", key, level, ChildNode->key);
+            return;
+        }
+        else
+        {
+            //TODO: change this function to pointer returning one, null as false, != null as true, and direction to the child!
+            //check if there is node with the same MOD -> can't insert on this level
+            Node* keyInList = isKeyInListButForChildRepairMe(mod, ChildNode);
+            if (keyInList != nullptr)
+            {
+                //check if pointer itself is our key value
+                if (keyInList->nextTreeNode->key == key)
+                {
+                    printf("%d exists\n", key);
+                    return;
+                }
+
+                //jump to the child node //TODO: just change it to while init?
+                /*insertKeyInDeeperLevels(key, div, MetaInfo, keyInList->nextTreeNode);
+                return;*/
+                ChildNode = keyInList->nextTreeNode;
+                level++;
+                continue;
+            }
+            else
+            {
+                //add key at "current level"
+                addKeyToListChild(key, mod, MetaInfo, ChildNode);
+                //printf("%d added at level %d, parrent: %d\n", key, level, ChildNode->key);
+                return;
+            }
+            printf("DEEPER LEVEL INSERT ERROR!!!\n", key);
+        }
+
+
+
+
+        
+    }
 }
 
 //main insert function
@@ -236,6 +442,22 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
         TreeRoot->key = key;
         return;
     }
+    else
+    {
+        if (TreeRoot->key == key)
+        {
+            printf("%d exists\n", key);
+            return;
+        }
+    }
+    //TODO: check if value is our key
+
+    //step 1.5 edge case handling
+    if (key > MetaInfo->maxNum || key < MetaInfo->minNum)
+    {
+        return;
+    }
+
 
     //step 2 root list handling
     int div = key / MetaInfo->rootConnections;
@@ -250,10 +472,19 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
     {
         //TODO: change this function to pointer returning one, null as false, != null as true, and direction to the child!
         //check if there is node with the same MOD -> can't insert on this level
-        if (isKeyInList(mod, TreeRoot) == true)
+        Node* keyInList = isKeyInList(mod, TreeRoot);
+        if (keyInList != nullptr)
         {
+            //check if pointer itself is our key value
+            if (keyInList->nextTreeNode->key == key)
+            {
+                printf("%d exists\n", key);
+                return;
+            }
+
             //jump to the child node
-            printf("this should not be active");
+            insertKeyInDeeperLevels(key, div, MetaInfo, keyInList->nextTreeNode);
+            return;
         }
         else
         {
@@ -261,9 +492,10 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
             addKeyToList(key, mod, MetaInfo, TreeRoot);
             return;
         }
+        printf("Main insert function reached end without inserting anything\n", key);
     }
 
-    printf("I should insert %d, but i am not done :(\n", key);
+    
 }
 
 
@@ -271,10 +503,107 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
 //======================================= LOOK COMMAND ========================================================================
 //=============================================================================================================================
 
-//main function
-void lookForKey(int key)
+//helper, iterative in children looking
+void lookForKeyInChildren(int key, int div, Child* CurrentChildren, MetaInfo* Info)
 {
-    printf("I should look for %d\n", key);
+    Child* CurrentChild = CurrentChildren;
+    int division = div;
+
+    while (true)
+    {
+        //step 1 check if our list is empty
+        if (CurrentChild->startOfList == nullptr)
+        {
+            printf("%d not exist\n", key);
+            return;
+        }
+
+        //calculate new div and mod
+        //TODO: why it work -> on piece of paper and stanford tree
+        int mod1 = division % Info->childConnections;
+        division = division / Info->childConnections;
+
+        //check if there is node with same mod
+        Node* CurrentNode = CurrentChild->startOfList;
+        while (CurrentNode != nullptr)
+        {
+            //if we get into node with same modulo, check if it's our key
+            if (CurrentNode->listnum == mod1)
+            {
+                if (CurrentNode->nextTreeNode->key == key)
+                {
+                    printf("%d exist\n", key);
+                    return;
+                }
+                else
+                {
+                    CurrentChild = CurrentNode->nextTreeNode;
+                    break;
+                }
+
+            }
+            //TODO: think about when it won't work
+            //if node is higher, it means we key do not exists.
+            if (CurrentNode->listnum > mod1)
+            {
+                printf("%d not exist\n", key);
+                return;
+            }
+            CurrentNode = CurrentNode->nextListNode;
+        }
+    }
+}
+
+//main function
+void lookForKey(int key, Root* TreeRoot, MetaInfo* Info)
+{
+    //edge case check if root is empty:
+    if (TreeRoot->empty == true)
+    {
+        printf("%d not exist\n", key);
+        return;
+    }
+
+    //step 1: check root:
+    if (TreeRoot->key == key)
+    {
+        printf("%d exist\n", key);
+        return;
+    }
+
+    int div = key / Info->rootConnections;
+    int mod = key % Info->rootConnections;
+    //step 2: rootlist
+
+    //check if there is node with same mod
+    Node* CurrentNode = TreeRoot->startOfList;
+    while (CurrentNode != nullptr)
+    {
+        //if we get into node with same modulo, check if it's our key
+        if (CurrentNode->listnum == mod)
+        {
+            if (CurrentNode->nextTreeNode->key == key)
+            {
+                printf("%d exist\n", key);
+                return;
+            }
+            else
+            {
+                Child* CurrentChild = CurrentNode->nextTreeNode;
+                lookForKeyInChildren(key, div, CurrentChild, Info);
+                return;
+            }
+
+        }
+
+        //if node is higher, it means we key do not exists.
+        if (CurrentNode->listnum > mod)
+        {
+                printf("%d not exist\n", key);
+                return;
+        }
+        CurrentNode = CurrentNode->nextListNode;
+    }
 }
 
 
@@ -282,10 +611,44 @@ void lookForKey(int key)
 //======================================= PRINT COMMAND =======================================================================
 //=============================================================================================================================
 
-//main function
-void printTree()
+//iterative function printing current branch of the tree (one children of root and every of his descendant)
+void printTreeBranch(Child* CurrentNode)
 {
-    printf("I should print the tree\n");
+    
+    printf("%d ", CurrentNode->key);
+
+    Node* ChildList = CurrentNode->startOfList;
+
+    //going deeper always has bigger priority
+    while (ChildList != nullptr)
+    {
+        printTreeBranch(ChildList->nextTreeNode);
+        ChildList = ChildList->nextListNode;
+    }
+}
+
+//main function
+void printTree(Root* TreeRoot)
+{
+    //edge case: root is empty
+    if (TreeRoot->empty == true)
+    {
+        //todo: what should be correct answer? new line or just simply skipping
+        return;
+    }
+    printf("%d ", TreeRoot->key);
+
+    Node* RootList = TreeRoot->startOfList;
+    //maybe do iteration of everynode while every node is different
+    while (RootList != nullptr)
+    {
+        printTreeBranch(RootList->nextTreeNode);
+        RootList = RootList->nextListNode;
+    }
+    //go for the leftmost and again again again recursion lalalal
+
+
+    printf("\n");
 }
 
 
@@ -293,10 +656,429 @@ void printTree()
 //======================================= DELETE COMMAND ======================================================================
 //=============================================================================================================================
 
-//main function
-void deleteKey(int key)
+//============================= COMMANDS FOR LOOKING ==============================================================
+//============================= CAN BE MERGED WITH LOOK FUNCTION ==================================================
+
+//helper, iterative in children looking
+Child* lookForKeyNodeHelper(int key, int div, Child* CurrentChildren, MetaInfo* Info)
 {
-    printf("I should delete %d\n", key);
+    Child* result = nullptr;
+    Child* CurrentChild = CurrentChildren;
+    int division = div;
+
+    while (true)
+    {
+        //step 1 check if our list is empty
+        if (CurrentChild->startOfList == nullptr)
+        {
+            printf("%d not exist\n", key);
+            return result;
+        }
+
+        //calculate new div and mod
+        //TODO: why it work -> on piece of paper and stanford tree
+        int mod1 = division % Info->childConnections;
+        division = division / Info->childConnections;
+
+        //check if there is node with same mod
+        Node* CurrentNode = CurrentChild->startOfList;
+        while (CurrentNode != nullptr)
+        {
+            //if we get into node with same modulo, check if it's our key
+            if (CurrentNode->listnum == mod1)
+            {
+                if (CurrentNode->nextTreeNode->key == key)
+                {
+                    //printf("%d exist\n", key);
+                    result = CurrentNode->nextTreeNode;
+                    return result;
+                }
+                else
+                {
+                    CurrentChild = CurrentNode->nextTreeNode;
+                    break;
+                }
+
+            }
+            //TODO: think about when it won't work
+            //if node is higher, it means we key do not exists.
+            if (CurrentNode->listnum > mod1)
+            {
+                printf("%d not exist\n", key);
+                return result;
+            }
+            CurrentNode = CurrentNode->nextListNode;
+        }
+    }
+}
+
+//find pointer to the deleted node
+Child* getKeyNodePointer(int key, Root* TreeRoot, MetaInfo* Info)
+{
+    Child* result = nullptr;
+    
+
+    int div = key / Info->rootConnections;
+    int mod = key % Info->rootConnections;
+    //step 2: rootlist
+
+    //check if there is node with same mod
+    Node* CurrentNode = TreeRoot->startOfList;
+    while (CurrentNode != nullptr)
+    {
+        //if we get into node with same modulo, check if it's our key
+        if (CurrentNode->listnum == mod)
+        {
+            //if pointed node has the same key, return
+            if (CurrentNode->nextTreeNode->key == key)
+            {
+                result = CurrentNode->nextTreeNode;
+                return result;
+            }
+            //if not run iterative helper function
+            else
+            {
+                Child* CurrentChild = CurrentNode->nextTreeNode;
+                return lookForKeyNodeHelper(key, div, CurrentChild, Info);;
+            }
+
+        }
+
+        //if node is higher, it means we key do not exists.
+        if (CurrentNode->listnum > mod)
+        {
+            printf("%d not exist\n", key);
+            return result;
+        }
+        CurrentNode = CurrentNode->nextListNode;
+    }
+
+    //if reached end of list/ next child has no list. end function return nullptr
+    printf("%d not exist\n", key);
+    return result;
+}
+
+//checks if key is in rootlist
+bool keyInRootList(int key, Root* TreeRoot)
+{
+    Node* StartOfList = TreeRoot->startOfList;
+    //possible modulo check for optimalisation -> return false if modulo is higher
+
+    while (StartOfList != nullptr)
+    {
+        if (StartOfList->nextTreeNode->key == key)
+        {
+            return true;
+        }
+
+        StartOfList = StartOfList->nextListNode;
+    }
+
+    return false;
+}
+
+//look for node leftmost child node
+//error if returns nullptr
+int removeRootHelper(Child* CurrentChildren)
+{
+    int result;
+    //since we know this child have at least one child we can assign values like that
+    Child* CurrentChild = CurrentChildren->startOfList->nextTreeNode;
+    Child* PreviousChild = CurrentChildren;
+
+    while (true)
+    {
+        //check if current node has no children
+        if (CurrentChild->startOfList == nullptr)
+        {
+            //get the key from node
+            result = CurrentChild->key;
+
+            //rearange the list in previous Node;
+            Node* newStart = PreviousChild->startOfList->nextListNode;
+            delete PreviousChild->startOfList->nextTreeNode;  //delete childless node
+            delete PreviousChild->startOfList;                //delete from list
+            PreviousChild->startOfList = newStart;            //update start of the list
+            return result;
+
+        }
+
+        PreviousChild = CurrentChild;
+        CurrentChild = CurrentChild->startOfList->nextTreeNode;
+    }
+
+    
+}
+
+//root deletion function
+void removeRoot(int key, Root* TreeRoot, MetaInfo* Info)
+{
+    //check if root have any children
+    if (TreeRoot->startOfList == nullptr)
+    {
+        TreeRoot->empty = true;
+        return;
+    }
+    else
+    {
+        int lastChildKey;
+        //case 1: leftmost child is childless (1 layer deep)
+        if (TreeRoot->startOfList->nextTreeNode->startOfList == nullptr)
+        {
+            lastChildKey = TreeRoot->startOfList->nextTreeNode->key;
+            TreeRoot->key = lastChildKey;
+            Node* newStart = TreeRoot->startOfList->nextListNode;
+            delete TreeRoot->startOfList->nextTreeNode;
+            delete TreeRoot->startOfList;
+            TreeRoot->startOfList = newStart;
+
+            return;
+        }
+        
+        //case 2: leftmost child have childlren (1+ layer deep)
+        lastChildKey = removeRootHelper(TreeRoot->startOfList->nextTreeNode);
+        TreeRoot->key = lastChildKey;
+    }
+}
+
+// find leftmostchild of this node, remove it and return the key to it
+int FindAndDeleteLeftMostChild(Node* CurrentNode)
+{
+    Child* PreviousChild = CurrentNode->nextTreeNode;
+    Child* CurrentChild = CurrentNode->nextTreeNode->startOfList->nextTreeNode;
+
+    //iterate until finding leftmost child
+    while (CurrentChild->startOfList != nullptr)
+    {
+        PreviousChild = CurrentChild;
+        CurrentChild = CurrentChild->startOfList->nextTreeNode;
+    }
+
+    //upon finding, do logic accordingly
+    //child is always first in list
+
+    // rearange PreviousChild List
+    Node* toDelete = PreviousChild->startOfList;
+    Child* leftmostDelete = PreviousChild->startOfList->nextTreeNode;
+    int result = CurrentChild->key;
+    PreviousChild->startOfList = PreviousChild->startOfList->nextListNode;
+    delete leftmostDelete;
+    delete toDelete;
+    return result;
+}
+
+//helper function    Node with value, Node before value
+void removeRootListHelper(Node* CurrentNode, Node* PreviousNode, int key, Root* TreeRoot)
+{
+    //case 1: Node has no children
+    if (CurrentNode->nextTreeNode->startOfList == nullptr)
+    {
+        //we only delete node and rearange list, no need to move keys
+
+        //if Node was first -> update first element
+        if (PreviousNode == nullptr)
+        {
+            TreeRoot->startOfList = CurrentNode->nextListNode;
+            delete CurrentNode->nextTreeNode;
+            delete CurrentNode;
+            return;
+        }
+
+        //if not update pointer of previous Node 
+        PreviousNode->nextListNode = CurrentNode->nextListNode;
+        delete CurrentNode->nextTreeNode;
+        delete CurrentNode;
+        return;
+    }
+
+    //case 2: Node has 1 Children
+    if (CurrentNode->nextTreeNode->startOfList != nullptr)
+    {
+        //since Node has child, manipulation of RootList nodes is not needed
+        int newKey = FindAndDeleteLeftMostChild(CurrentNode);
+        CurrentNode->nextTreeNode->key = newKey;
+        return;
+    }
+}
+
+//remove key from RootList
+void removeRootList(int key, Root* TreeRoot)
+{
+    Node* CurrentNode = TreeRoot->startOfList;
+    Node* PreviousNode = nullptr;
+
+    while (CurrentNode != nullptr)
+    {
+        //check if current node has our key
+        if (CurrentNode->nextTreeNode->key == key)
+        {
+            removeRootListHelper(CurrentNode, PreviousNode, key, TreeRoot);
+            return;
+        }
+
+
+        PreviousNode = CurrentNode;
+        CurrentNode = CurrentNode->nextListNode;
+    }
+}
+
+//same as removing nodes with Rootlist
+void removeDeeperFoundHelper(Node* CurrentNode, Node* PreviousNode, int key, Child* ChildBeforeKey)
+{
+    //we start with currentNode -> pointing to Child with key, and previousNode
+
+    //case with our key having no children
+    if (CurrentNode->nextTreeNode->startOfList == nullptr)
+    {
+        //we only delete node and rearange list, no need to move keys
+
+        //if Node was first -> update first element
+        if (PreviousNode == nullptr)
+        {
+            //trzeba podmianke
+            ChildBeforeKey->startOfList = CurrentNode->nextListNode;
+            delete CurrentNode->nextTreeNode;
+            delete CurrentNode;
+            return;
+        }
+
+        //if not update pointer of previous Node 
+        PreviousNode->nextListNode = CurrentNode->nextListNode;
+        delete CurrentNode->nextTreeNode;
+        delete CurrentNode;
+        return;
+    }
+
+    //case 2: Node has 1 Children   //TODO: this is straight up copied form RootList function, need to check if it works correctly
+    if (CurrentNode->nextTreeNode->startOfList != nullptr)
+    {
+        //since Node has child, manipulation of RootList nodes is not needed
+        int newKey = FindAndDeleteLeftMostChild(CurrentNode);
+        CurrentNode->nextTreeNode->key = newKey;
+        return;
+    }
+
+}
+
+//handle looking dor key and deletion it in pure Child cases
+void removeDeeperHelper(int div, int key, Node* CurrentNode, MetaInfo* Info)
+{
+    //we start at "rootlist level" of tree, we know modulo is not here, currentChild is at level bellow
+
+    //step 1: find our key
+    int division = div;
+
+    //NOTE: check with many cases
+    int newDiv = division;
+    int newMod = division % Info->childConnections;
+    Node* previousNode = nullptr;
+    Node* currentNode = CurrentNode->nextTreeNode->startOfList;
+    Child* ChildBeforeKey = CurrentNode->nextTreeNode;
+
+    //iterate through whole tree until you find key (or not)
+    while (currentNode != nullptr)
+    {
+        if (currentNode->listnum == newMod)
+        {
+            if (currentNode->nextTreeNode->key == key)
+            {
+                //remove [finally] key from found node
+                removeDeeperFoundHelper(currentNode, previousNode, key, ChildBeforeKey); //very good we pass all of this node parrent data for no child exception
+                return;
+            }
+            else
+            {
+                ChildBeforeKey = currentNode->nextTreeNode;
+                currentNode = currentNode->nextTreeNode->startOfList;
+                previousNode = nullptr;
+               
+                newDiv = newDiv / Info->childConnections;
+                newMod = newDiv % Info->childConnections;
+                continue;
+            }
+        }
+
+        if (currentNode->listnum > newMod)
+        {
+            scanf("%d not exist\n", key);
+            return;
+        }
+
+
+        previousNode = currentNode;
+        currentNode = currentNode->nextListNode;
+    }
+
+    //if loop broke without giving result it means there is no key
+    scanf("%d not exist\n", key);
+}
+
+//handle removing from deeper levels (not connected to the root)
+void removeDeeper(int key, Root* TreeRoot, MetaInfo* Info)
+{
+    //step 1: look for the key, print "[key] not exist" when not found
+
+    //we check if root is empty, but not rootlist
+    if (TreeRoot->startOfList == nullptr)
+    {
+        scanf("%d not exist\n", key);
+        return;
+    }
+
+    //iterate through Rootlist, we know key is not direct descendant of root (case 2 in main function)
+    Node* CurrentNode = TreeRoot->startOfList;
+    int mod = key % Info->rootConnections;
+    int div = key / Info->rootConnections;
+
+    while (CurrentNode != nullptr)
+    {
+        //if we reached same modulo, get deeper
+        if (CurrentNode->listnum == mod)
+        {
+            removeDeeperHelper(div, key, CurrentNode, Info);
+            return;
+        }
+
+        //if higher modulo reached, it means our key do not exists
+        if (CurrentNode->listnum > mod)
+        {
+            scanf("%d not exist\n", key);
+            return;
+        }
+        CurrentNode = CurrentNode->nextListNode;
+    }
+
+    //if while loop reached end it means there is no our key ex. modulo 7 in list 0->1->4->NULL
+    scanf("%d not exist\n", key);
+}
+
+//main function
+void deleteKey(int key, Root* TreeRoot, MetaInfo* Info)
+{
+    //=== special case TRIE tree is empty ===
+    if (TreeRoot->empty == true)
+    {
+        printf("%d not exist)\n", key);
+        return;
+    }
+
+    //step 1: removing key from the root
+    if (TreeRoot->key == key)
+    {
+        removeRoot(key, TreeRoot, Info);
+        return;
+    }
+
+    //step 2: removing from rootlist  NOTE: is checking like this affects performance?
+    if (keyInRootList(key, TreeRoot) == true)
+    {
+        removeRootList(key, TreeRoot);
+        return;
+    }
+
+    //step 3: if not in root or Rootlist, look for node
+    removeDeeper(key, TreeRoot, Info);
+
 }
 
 //=============================================================================================================================
@@ -353,13 +1135,13 @@ int main()
                 insertKey(key, &TreeInfo, &Root);
                 break;
             case 'L':
-                lookForKey(key);
+                lookForKey(key, &Root, &TreeInfo);
                 break;
             case 'P':
-                printTree();
+                printTree(&Root);
                 break;
             case 'D':
-                deleteKey(key);
+                deleteKey(key, &Root, &TreeInfo);
                 break;
             //for debugging functions
             case '@':
@@ -369,7 +1151,6 @@ int main()
                 break;
         }
     }
-    
     return 0;
 }
 
@@ -468,3 +1249,40 @@ int main()
 //printf("Czy jest 3? %s\n", isKeyInList(3, &Root) ? "TAK" : "NIE"); // TAK
 //printf("Czy jest 2? %s\n", isKeyInList(2, &Root) ? "TAK" : "NIE"); // NIE
 //printf("Czy jest 6? %s\n", isKeyInList(6, &Root) ? "TAK" : "NIE"); // NIE
+
+
+////remove keys attached to the root
+//void removeRootListKey(int key, Root* TreeRoot, MetaInfo* Info)
+//{
+//    int mod = key % Info->rootConnections;
+//    Node* ListStart = TreeRoot->startOfList;
+//
+//    while (ListStart != nullptr)
+//    {
+//        if (ListStart->listnum == mod)
+//        {
+//            if (ListStart->nextTreeNode->key == key)
+//            {
+//                if (ListStart->nextTreeNode->startOfList == nullptr)
+//                {
+//
+//                }
+//                //case no children
+//                // 
+//                // case one children
+//                // 
+//                // case one+ children
+//                // deleting from rootlist helper (this node) (rootlist)
+//            }
+//            else
+//            {
+//                return;
+//            }
+//        }
+//
+//        if (ListStart->listnum > mod)
+//        {
+//            return;
+//        }
+//    }
+//}
