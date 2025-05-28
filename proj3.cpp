@@ -54,12 +54,6 @@ struct Node
     int listnum;                                        //which element of the list it is eg. 0,1,7 etc.
 };
 
-struct ChildFindingNodes
-{
-    Node* previousNode;
-    Node* currentNode;
-};
-
 
 //=============================================================================================================================
 //======================================= SHARED/MISC. FUNCTIONS ==============================================================
@@ -422,13 +416,7 @@ void insertKeyInDeeperLevels(int key, int div, MetaInfo* MetaInfo, Child* ChildN
                 //printf("%d added at level %d, parrent: %d\n", key, level, ChildNode->key);
                 return;
             }
-            printf("DEEPER LEVEL INSERT ERROR!!!\n", key);
         }
-
-
-
-
-
     }
 }
 
@@ -492,10 +480,7 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
             addKeyToList(key, mod, MetaInfo, TreeRoot);
             return;
         }
-        printf("Main insert function reached end without inserting anything\n", key);
     }
-
-
 }
 
 
@@ -712,7 +697,7 @@ int removeRootHelper(Child* CurrentChildren)
 }
 
 //root deletion function
-void removeRoot(int key, Root* TreeRoot, MetaInfo* Info)
+void removeRoot(Root* TreeRoot)
 {
     //check if root have any children
     if (TreeRoot->startOfList == nullptr)
@@ -769,7 +754,7 @@ int FindAndDeleteLeftMostChild(Node* CurrentNode)
 }
 
 //helper function    Node with value, Node before value
-void removeRootListHelper(Node* CurrentNode, Node* PreviousNode, int key, Root* TreeRoot)
+void removeRootListHelper(Node* CurrentNode, Node* PreviousNode, Root* TreeRoot)
 {
     //case 1: Node has no children
     if (CurrentNode->nextTreeNode->startOfList == nullptr)
@@ -813,7 +798,7 @@ void removeRootList(int key, Root* TreeRoot)
         //check if current node has our key
         if (CurrentNode->nextTreeNode->key == key)
         {
-            removeRootListHelper(CurrentNode, PreviousNode, key, TreeRoot);
+            removeRootListHelper(CurrentNode, PreviousNode, TreeRoot);
             return;
         }
 
@@ -824,7 +809,7 @@ void removeRootList(int key, Root* TreeRoot)
 }
 
 //same as removing nodes with Rootlist
-void removeDeeperFoundHelper(Node* CurrentNode, Node* PreviousNode, int key, Child* ChildBeforeKey)
+void removeDeeperFoundHelper(Node* CurrentNode, Node* PreviousNode, Child* ChildBeforeKey)
 {
     //we start with currentNode -> pointing to Child with key, and previousNode
 
@@ -884,7 +869,7 @@ void removeDeeperHelper(int div, int key, Node* CurrentNode, MetaInfo* Info)
             if (currentNode->nextTreeNode->key == key)
             {
                 //remove [finally] key from found node
-                removeDeeperFoundHelper(currentNode, previousNode, key, ChildBeforeKey); //very good we pass all of this node parrent data for no child exception
+                removeDeeperFoundHelper(currentNode, previousNode, ChildBeforeKey); //very good we pass all of this node parrent data for no child exception
                 return;
             }
             else
@@ -966,7 +951,7 @@ void deleteKey(int key, Root* TreeRoot, MetaInfo* Info)
     //step 1: removing key from the root
     if (TreeRoot->key == key)
     {
-        removeRoot(key, TreeRoot, Info);
+        removeRoot(TreeRoot);
         return;
     }
 
