@@ -72,7 +72,7 @@ void initialiseRoot(MetaInfo* MetaInfo, Root* TreeRoot)
 //======================================= INSERT COMMAND ======================================================================
 //=============================================================================================================================
 
-//handle adding key to the root with empty list TODO: might be the same for child, change metainfo for lenght thats all  [merge2]
+//handle adding key to the root with empty list TODO: might be the same for child, change metainfo for lenght thats all
 void handleRootEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
 {
     //rootList is no longer empty, we attach new node to it
@@ -90,7 +90,7 @@ void handleRootEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Root* TreeR
     NewNode->nextTreeNode.startOfList = nullptr;
 }
 
-//when cleaning -> merging root as Child node you can merge it with upper funtion                                       [merge2]
+//when cleaning -> merging root as Child node you can merge it with upper funtion
 void handleListEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Child* ChildNode)
 {
     //rootList is no longer empty, we attach new node to it
@@ -107,12 +107,10 @@ void handleListEmptyListInsert(int key, int mod, MetaInfo* MetaInfo, Child* Chil
     NewNode->nextTreeNode.startOfList = nullptr;
 }
 
-//returns pointer to the node with same modulo as key, nullptr if such node don't exist    [merge2]
+//returns pointer to the node with same modulo as key, nullptr if such node don't exist
 Node* isKeyInList(int mod, Root* TreeRoot)
 {
     Node* currentNode = TreeRoot->startOfList;
-
-    //until reached end of the list
     while (currentNode != nullptr)
     {
         if (currentNode->listnum == mod)
@@ -127,12 +125,10 @@ Node* isKeyInList(int mod, Root* TreeRoot)
 
         currentNode = currentNode->nextListNode;
     }
-
-    //if list with same modulo is not found return nullptr
     return nullptr;
 }
 
-//returns pointer to the node with same modulo as key, nullptr if such node don't exist  TODO: merge with root in future  [merge2]
+//returns pointer to the node with same modulo as key, nullptr if such node don't exist  TODO: merge with root in future
 Node* isKeyInListButForChild(int mod, Child* ChildNode)
 {
     Node* currentNode = ChildNode->startOfList;
@@ -165,7 +161,7 @@ void fillOutNewNode(Node* newNode, Node* nextNode, int key, int mod, MetaInfo* M
 
 //TODO: function of assigning child values to the given pointer, pointer manipulation in list is different but adding child
 // is always the same
-//add the key to the nonEmpty list (we know our field is empty)  TODO: compilable for root and children -> metainfo to number like int limit [merge2]
+//add the key to the nonEmpty list (we know our field is empty)  TODO: compilable for root and children -> metainfo to number like int limit
 void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
 {
     //get pointers to first two elements in the list, if there is at least two elements in the list
@@ -261,7 +257,7 @@ void addKeyToList(int key, int mod, MetaInfo* MetaInfo, Root* TreeRoot)
     printf("adding this failed %d\n", mod);
 }
 
-//same as above, merge it pleasw!!  [merge2]
+//same as above, merge it pleasw!!
 void addKeyToListChild(int key, int mod, MetaInfo* MetaInfo, Child* ChildNode)
 {
     //get pointers to first two elements in the list, if there is at least two elements in the list
@@ -482,7 +478,7 @@ void insertKey(int key, MetaInfo* MetaInfo, Root* TreeRoot)
 //======================================= LOOK COMMAND ========================================================================
 //=============================================================================================================================
 
-//helper, iterative in children looking [merge2]
+//helper, iterative in children looking
 void lookForKeyInChildren(int key, int div, Child* CurrentChildren, MetaInfo* Info)
 {
     Child* CurrentChild = CurrentChildren;
@@ -533,7 +529,7 @@ void lookForKeyInChildren(int key, int div, Child* CurrentChildren, MetaInfo* In
     }
 }
 
-//main function [merge2]
+//main function
 void lookForKey(int key, Root* TreeRoot, MetaInfo* Info)
 {
     //edge case check if root is empty:
@@ -590,7 +586,7 @@ void lookForKey(int key, Root* TreeRoot, MetaInfo* Info)
 //======================================= PRINT COMMAND =======================================================================
 //=============================================================================================================================
 
-//iterative function printing current branch of the tree (one children of root and every of his descendant)  [merge2]
+//iterative function printing current branch of the tree (one children of root and every of his descendant)
 void printTreeBranch(Child* CurrentNode)
 {
     //print current node
@@ -607,7 +603,7 @@ void printTreeBranch(Child* CurrentNode)
     }
 }
 
-//main function [merge2]
+//main function
 void printTree(Root* TreeRoot)
 {
     //edge case: root is empty
